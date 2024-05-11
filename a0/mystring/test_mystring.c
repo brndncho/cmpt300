@@ -19,9 +19,9 @@ int main()
 	mystrcpy(buffer, "I am testing my string functions!");
 	assert(strcmp(buffer, "I am testing my string functions!") == 0);
 
-
+	
 	assert(mystrcmp ("I love coding", "I love coding") == 0);
-
+	
 	char *dupStr = mystrdup(buffer);
 	assert (!strcmp(buffer, dupStr));
 	assert (buffer != dupStr);

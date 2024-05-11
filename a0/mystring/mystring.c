@@ -1,5 +1,6 @@
 #include "mystring.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 /*
  *   Implement the following functions: 
@@ -16,7 +17,15 @@
 int mystrlen (const char *s) 
 {
 	/* Complete the body of the function */
-	return 0;
+	// return 0;
+
+	// go through each character in the string, add to counter for each time.
+	int i = 0;
+	while (s[i] != '\0') {
+		i++;
+	}
+
+	return i;
 }
 
 /*
@@ -27,20 +36,48 @@ int mystrlen (const char *s)
 char  *mystrcpy (char *dst, const char *src)
 {
 	/* Complete the body of the function */
-	return NULL;
+	
+	// use the src pointer and copy into dst pointer
+	int i = 0;
+	while (src[i] !='\0') {
+		dst[i] = src[i];
+		i++;
+	}
+
+	// add null terminator to end of dst
+	dst[i] = '\0';
+
+	return dst;
 }
 
 /*
  * mystrcmp() compares two strings alphabetically
  * Returns: 
- * 	-1 if s1  < s2
+ * 	   -1 if s1  < s2
  *  	0 if s1 == s2
  *  	1 if s1 > s2
  */
 int mystrcmp(const char *s1, const char *s2)
 {
 	/* Complete the body of the function */
-	return 0;
+    
+	// loop while chars are equal and both arent terminated
+	while (*s1 != '\0' && *s1 == *s2) {
+		s1++;
+		s2++;
+	}
+
+	// compare at the last stopped pointer 
+	if (*s1 < *s2) {
+		return -1;
+	}
+	else if (*s1 > *s2) {
+		return 1;
+	}
+	else {
+		return 0;
+	}
+	
 }
 
 /*
@@ -53,7 +90,12 @@ int mystrcmp(const char *s1, const char *s2)
  */
 char *mystrdup(const char *s1)
 {
-	/* Complete the body of the function */
-	return NULL;
+	char *duplicate = malloc(mystrlen(s1)); // alloocate memory
+	if (duplicate == NULL) {
+		return NULL; // malloc failed
+	}
+	else {
+		return mystrcpy(duplicate, s1);
+	}
 }
 
