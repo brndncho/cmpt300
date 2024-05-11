@@ -5,3 +5,8 @@ helloworldtest/helloworld.c
 helloworldtest/helloworld.dSYM/Contents/Info.plist
 helloworldtest/helloworld.dSYM/Contents/Resources/DWARF/helloworld
 helloworldtest/helloworld.dSYM/Contents/Resources/Relocations/aarch64/helloworld.yml
+a0/mystring/mystring.o
+a0/mystring/test_mystring
+a0/mystring/test_mystring.o
+a0/mystring.tar.gz:Zone.Identifier
+.vscode/c_cpp_properties.json
