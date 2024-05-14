@@ -148,7 +148,7 @@ void List_sort (struct nodeStruct **headRef) {
     }
 }
 
-// assume head is not null
+/* assume head is not null
 void List_free (struct nodeStruct **headRef) {
     struct nodeStruct* cur = *headRef;
     struct nodeStruct* nxt;
@@ -161,3 +161,4 @@ void List_free (struct nodeStruct **headRef) {
     
     *headRef = NULL;
 }
+*/

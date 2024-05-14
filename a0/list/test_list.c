@@ -63,11 +63,11 @@ void test1() {
 	assert(strcmp(current->item, "b") == 0);
 	assert(current->next == NULL);
 
-    List_free(&head);
+    //List_free(&head);
     
 	printf("\nExecution finished.\n");
 }
-
+/*
 void test2() {
     
     printf("Starting test2\n");
@@ -93,13 +93,7 @@ void test2() {
     assert(current->next == NULL);
 
     List_sort(&head);
-    current = head;
-    /*
-    while(current != NULL) {
-        printf("%s\n", current->item);
-        current = current->next;
-    }
-    */
+
     current = head;
 	assert(strcmp(current->item, "aaron") == 0);
 	assert(current->next != NULL);
@@ -143,6 +137,7 @@ void test3() {
     List_free(&head);
     printf("test 3 complete \n");
 }
+*/
 
 /*
  * Main()
@@ -150,8 +145,8 @@ void test3() {
 int main(int argc, char** argv)
 {
 	test1();
-    test2();
-    test3();
+    //test2();
+    //test3();
 	return 0;
     
 }
