@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #define COMMAND_LENGTH 1024
 #define NUM_TOKENS (COMMAND_LENGTH / 2 + 1)
@@ -96,6 +98,40 @@ void read_command(char *buff, char *tokens[], _Bool *in_background)
 	}
 }
 
+void shell_manager(char* tokens[], _Bool in_background) {
+	if (strcmp(tokens[0], "exit") == 0) {
+		write(STDOUT_FILENO, "Exiting shell\n", strlen("Exiting shell\n"));
+		exit(0);
+	}
+
+	// create child process
+	pid_t var_pid;
+	int status;
+	var_pid = fork();
+
+	if (var_pid < 0) {
+		perror("fork Failed");
+		exit(-1);
+	}
+	else if (var_pid == 0) {
+		int execvp_code = execvp(tokens[0], tokens);
+		
+		// in case of error
+		if (execvp_code == -1) {
+			perror("execvp Failed");
+			exit(-1);
+		}
+	}
+	// wait for child to complete
+	else if (!in_background) {
+		while (waitpid(-1, &status, WNOHANG) > 0);
+	}
+	// Cleanup any previously exited background child processes
+	// (The Zombies)
+	while (waitpid(-1, NULL, WNOHANG) > 0); // do nothing.
+	
+}
+
 /**
  * Main and Execute Commands
  */
@@ -112,6 +148,11 @@ int main(int argc, char* argv[])
 		_Bool in_background = false;
 		read_command(input_buffer, tokens, &in_background);
 
+		shell_manager(tokens, in_background);
+
+
+
+		/* 
 		// DEBUG: Dump out arguments:
 		for (int i = 0; tokens[i] != NULL; i++) {
 			write(STDOUT_FILENO, "   Token: ", strlen("   Token: "));
@@ -121,6 +162,7 @@ int main(int argc, char* argv[])
 		if (in_background) {
 			write(STDOUT_FILENO, "Run in background.", strlen("Run in background."));
 		}
+		*/
 
 		/**
 		 * Steps For Basic Shell:
