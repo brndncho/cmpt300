@@ -11,6 +11,10 @@
 
 #define COMMAND_LENGTH 1024
 #define NUM_TOKENS (COMMAND_LENGTH / 2 + 1)
+#define HISTORY_DEPTH 10
+
+char history[HISTORY_DEPTH][COMMAND_LENGTH];
+int command_counter = 0;
 
 
 /**
@@ -103,7 +107,45 @@ write(STDOUT_FILENO, "x123", strlen("x123"));
 write(STDOUT_FILENO, "\n", strlen("\n"));
 */
 
+// Add command to history array
+void add_to_history(const char *command) {
+	// wrap around history array if over 10
+    int index = command_counter % HISTORY_DEPTH;
+	// copy command to history array
+    strncpy(history[index], command, COMMAND_LENGTH);
+	//increase counter
+    command_counter++;
+}
+
+// Show the previous 10 command history
+void display_history() {
+	// if we issued more commands than the history depth (10) so far, start from the 10th most recent command, else start at 0
+    int start = command_counter > HISTORY_DEPTH ? command_counter - HISTORY_DEPTH : 0;
+	// if we have more commands than history depth, show last 10, else, show the commands entered so far.
+    int count = command_counter > HISTORY_DEPTH ? HISTORY_DEPTH : command_counter;
+	// print out command counter + commands in history
+    for (int i = 0; i < count; i++) {
+        int index = (start + i) % HISTORY_DEPTH;
+        printf("%d\t%s\n", start + i, history[index]);
+    }
+}
+
 void shell_manager(char* tokens[], _Bool in_background) {
+
+	// Concatenate tokens into a single command string
+    char command[COMMAND_LENGTH] = "";
+    for (int i = 0; tokens[i] != NULL; i++) {
+        strcat(command, tokens[i]);
+        if (tokens[i + 1] != NULL) {
+            strcat(command, " ");
+        }
+    }
+    if (in_background) {
+        strcat(command, " &");
+    }
+
+    // Add command to history
+    add_to_history(command);
 
 	// exit the shell program
 	if (strcmp(tokens[0], "exit") == 0) {
@@ -191,6 +233,12 @@ void shell_manager(char* tokens[], _Bool in_background) {
 				write(STDOUT_FILENO, "\n", strlen("\n"));
 			}
 		}
+		return;
+	}
+
+	// show history
+	if (strcmp(tokens[0], "history") == 0) {
+		display_history();
 		return;
 	}
 
