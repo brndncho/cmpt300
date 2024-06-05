@@ -132,6 +132,8 @@ void shell_manager(char* tokens[], _Bool in_background) {
 	
 }
 
+
+
 /**
  * Main and Execute Commands
  */
@@ -144,6 +146,18 @@ int main(int argc, char* argv[])
 		// Get command
 		// Use write because we need to use read() to work with
 		// signals, and read() is incompatible with printf().
+
+		// show the current working directory in the prompt.
+		// source: https://stackoverflow.com/questions/298510/how-to-get-the-current-directory-in-a-c-program (Author:Mic)
+		char cwd[COMMAND_LENGTH];
+		if (getcwd(cwd, sizeof(cwd)) != NULL) {
+			write (STDOUT_FILENO, cwd, strlen(cwd));
+		}
+		else {
+			perror("getcwd() Error");
+			exit(-1);
+		}
+
 		write(STDOUT_FILENO, "$ ", strlen("$ "));
 		_Bool in_background = false;
 		read_command(input_buffer, tokens, &in_background);
