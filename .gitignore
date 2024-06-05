@@ -10,3 +10,5 @@ a0/mystring/test_mystring
 a0/mystring/test_mystring.o
 a0/mystring.tar.gz:Zone.Identifier
 .vscode/c_cpp_properties.json
+a1/shell
+a1/shell.o
