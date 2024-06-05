@@ -130,6 +130,14 @@ void display_history() {
     }
 }
 
+// clear history helper
+void clear_history() {
+	// zero out history array with memset()
+	memset(history, 0, sizeof(history));
+	// reset counter
+	command_counter = 0;
+}
+
 void shell_manager(char* tokens[], _Bool in_background) {
 
 	// Concatenate tokens into a single command string
@@ -149,6 +157,25 @@ void shell_manager(char* tokens[], _Bool in_background) {
 		// Add command to history
     	add_to_history(command);
 	}
+
+	// clear shell history
+	if (strcmp(tokens[0], "!-") == 0) {
+		clear_history();
+		return;
+	}
+	/*
+	if (strcmp(tokens[0], "!!") == 0) {
+		// if history is empty
+		if (command_counter == 0) {
+			write(STDERR_FILENO, "Error: no previous commands in history stored.", strlen("Error: no previous commands in history stored."));
+			write(STDOUT_FILENO, "\n", strlen("\n"));
+		}
+		else {
+
+		}
+		return;
+	}
+	*/
 
 	// exit the shell program
 	if (strcmp(tokens[0], "exit") == 0) {
