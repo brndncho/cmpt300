@@ -143,9 +143,12 @@ void shell_manager(char* tokens[], _Bool in_background) {
     if (in_background) {
         strcat(command, " &");
     }
-
-    // Add command to history
-    add_to_history(command);
+	
+	// if ! in the first char, do not add into history
+	if (command[0] != '!') {
+		// Add command to history
+    	add_to_history(command);
+	}
 
 	// exit the shell program
 	if (strcmp(tokens[0], "exit") == 0) {
