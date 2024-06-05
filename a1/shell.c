@@ -98,10 +98,100 @@ void read_command(char *buff, char *tokens[], _Bool *in_background)
 	}
 }
 
+/*
+write(STDOUT_FILENO, "x123", strlen("x123"));
+write(STDOUT_FILENO, "\n", strlen("\n"));
+*/
+
 void shell_manager(char* tokens[], _Bool in_background) {
+
+	// exit the shell program
 	if (strcmp(tokens[0], "exit") == 0) {
-		write(STDOUT_FILENO, "Exiting shell\n", strlen("Exiting shell\n"));
+		write(STDOUT_FILENO, "Exiting shell...\n", strlen("Exiting shell...\n"));
 		exit(0);
+	}
+
+	// display current working directory
+	if (strcmp(tokens[0], "cwd") == 0) {
+		char cwd[COMMAND_LENGTH];
+		if (getcwd(cwd, sizeof(cwd)) != NULL) {
+			write(STDOUT_FILENO, "Current Working Directory: ", strlen("Current Working Directory: "));
+			write(STDOUT_FILENO, cwd, strlen(cwd));
+			write(STDOUT_FILENO, "\n", strlen("\n"));
+		}
+		else {
+			perror("getcwd() Error");
+			exit(-1);
+		}
+		return;
+	}
+
+	// change the current working directory
+	if (strcmp(tokens[0], "cd") == 0) {
+			// if no directory is inputted
+		if (tokens[1] == NULL) {
+			write(STDERR_FILENO, "cd Failed: expected an argument", strlen("cd Failed: expected an argument"));
+			write(STDOUT_FILENO, "\n", strlen("\n"));
+			return;
+		}
+		// if too many arguments
+		if (tokens[2] != NULL) {
+			write(STDERR_FILENO, "cd Failed: too many arguments", strlen("cd Failed: too many arguments"));
+			write(STDOUT_FILENO, "\n", strlen("\n"));
+			return;
+		}
+		// if directory could not be found
+		if (chdir(tokens[1]) != 0) {
+			write(STDERR_FILENO, "cd Failed: invalid directory", strlen("cd Failed: invalid directory"));
+			write(STDOUT_FILENO, "\n", strlen("\n"));
+			return;
+		}
+		return;
+	}
+
+	// help information
+	if (strcmp(tokens[0], "help") == 0) {
+		// list all internal commands
+		if (tokens[1] == NULL) {
+			write(STDOUT_FILENO, "Supported internal commands:", strlen("Supported internal commands:"));
+			write(STDOUT_FILENO, "\n", strlen("\n"));
+			write(STDOUT_FILENO, "exit: Exit the shell", strlen("exit: Exit the shell"));
+			write(STDOUT_FILENO, "\n", strlen("\n"));
+			write(STDOUT_FILENO, "cwd: Display the current working directory", strlen("cwd: Display the current working directory"));
+			write(STDOUT_FILENO, "\n", strlen("\n"));
+			write(STDOUT_FILENO, "cd: Change the current working directory", strlen("cd: Change the current working directory"));
+			write(STDOUT_FILENO, "\n", strlen("\n"));
+			write(STDOUT_FILENO, "help x: Display information about shell command x", strlen("help x: Display information about shell command x"));
+			write(STDOUT_FILENO, "\n", strlen("\n"));
+		}
+		// if more than one argument
+		else if (tokens[2] != NULL) {
+			write(STDERR_FILENO, "help Error: too many arguments", strlen("help Error: too many arguments"));
+			write(STDOUT_FILENO, "\n", strlen("\n"));
+		}
+		else {
+			// builtin commands
+			if (strcmp(tokens[1], "cd") == 0) {
+				write(STDOUT_FILENO, "'cd' is a builtin command for changing the current working directory", strlen("'cd' is a builtin command for changing the current working directory"));
+				write(STDOUT_FILENO, "\n", strlen("\n"));
+			}
+			else if (strcmp(tokens[1], "exit") == 0) {
+				write(STDOUT_FILENO, "'exit' is a builtin command for exiting the shell", strlen("'exit' is a builtin command for exiting the shell"));
+				write(STDOUT_FILENO, "\n", strlen("\n"));	
+			}
+			else if (strcmp(tokens[1], "cwd") == 0) {
+				write(STDOUT_FILENO, "'cwd' is a builtin command for displaying the current working directory", strlen("'cwd' is a builtin command for displaying the current working directory"));
+				write(STDOUT_FILENO, "\n", strlen("\n"));
+			}
+			// external commands
+			else {
+				write(STDOUT_FILENO, "'", strlen("'"));
+				write(STDOUT_FILENO, tokens[1], strlen(tokens[1]));
+				write(STDOUT_FILENO, "' is an external command or application", strlen("' is an external command or application"));
+				write(STDOUT_FILENO, "\n", strlen("\n"));
+			}
+		}
+		return;
 	}
 
 	// create child process
@@ -141,6 +231,13 @@ int main(int argc, char* argv[])
 {
 	char input_buffer[COMMAND_LENGTH];
 	char *tokens[NUM_TOKENS];
+
+	// Start shell at user's home directory
+	if (chdir(getenv("HOME")) != 0) {
+		perror("Unable to cd to home: ");
+		exit(-1);
+	}
+
 	while (true) {
 
 		// Get command
@@ -151,7 +248,7 @@ int main(int argc, char* argv[])
 		// source: https://stackoverflow.com/questions/298510/how-to-get-the-current-directory-in-a-c-program (Author:Mic)
 		char cwd[COMMAND_LENGTH];
 		if (getcwd(cwd, sizeof(cwd)) != NULL) {
-			write (STDOUT_FILENO, cwd, strlen(cwd));
+			write(STDOUT_FILENO, cwd, strlen(cwd));
 		}
 		else {
 			perror("getcwd() Error");
