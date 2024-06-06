@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <ctype.h>
 
 #include "shell.h"
 
@@ -211,26 +212,52 @@ void shell_manager(char* tokens[], _Bool in_background) {
 		// Add command to history
     	add_to_history(command);
 	}
-
-	// clear shell history
-	if (strcmp(tokens[0], "!-") == 0) {
-		clear_history();
-		return;
-	}
-	
-	if (strcmp(tokens[0], "!!") == 0) {
-		// if history is empty
-		if (command_counter == 0) {
-			write(STDERR_FILENO, "Error: no previous commands in history stored.", strlen("Error: no previous commands in history stored."));
+	else {
+		if (tokens[1] != NULL) {
+			write(STDERR_FILENO, "! Error: too many arguments", strlen("! Error: too many arguments"));
 			write(STDOUT_FILENO, "\n", strlen("\n"));
 		}
-		else {
-			//read_command_history(command_counter);
-			read_command_history_exec(0, in_background);
+		// clear shell history
+		else if (strcmp(tokens[0], "!-") == 0) {
+			clear_history();
+			return;
 		}
-		return;
+		else if (strcmp(tokens[0], "!!") == 0) {
+			// if history is empty
+			if (command_counter == 0) {
+				write(STDERR_FILENO, "Error: no previous commands in history stored.", strlen("Error: no previous commands in history stored."));
+				write(STDOUT_FILENO, "\n", strlen("\n"));
+			}
+			else {
+				//read_command_history(command_counter);
+				read_command_history_exec(0, in_background);
+			}
+			return;
+		}
+		else {
+			// copy token[0] 
+			char input_buffer[COMMAND_LENGTH];
+			strcpy(input_buffer, tokens[0]);
+			// get rid of !
+			memmove(input_buffer, input_buffer+1, strlen(input_buffer));\
+
+			// Idea from: https://stackoverflow.com/questions/16644906/how-to-check-if-a-string-is-a-number
+			int i = 0;
+			while (i < strlen(input_buffer)) {
+				if (!isdigit(input_buffer[i])) {
+					write(STDERR_FILENO, "Error !x: x is not a number.", strlen("Error !x: x is not a number."));
+					write(STDOUT_FILENO, "\n", strlen("\n"));
+					return;
+				}
+				i++;
+			}
+			int command_num = atoi(input_buffer);
+			//write(STDOUT_FILENO, command_num, strlen(command_num));
+			//write(STDOUT_FILENO, "\n", strlen("\n"));
+			read_command_history_exec(command_num, in_background);
+			return;
+		}
 	}
-	
 
 	// exit the shell program
 	if (strcmp(tokens[0], "exit") == 0) {

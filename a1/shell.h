@@ -16,5 +16,4 @@ void read_command_history_exec(int command_number, _Bool in_background);
 void clear_history();
 void shell_manager(char* tokens[], _Bool in_background);
 
-
 #endif
