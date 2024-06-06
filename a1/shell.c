@@ -9,9 +9,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
-#define COMMAND_LENGTH 1024
-#define NUM_TOKENS (COMMAND_LENGTH / 2 + 1)
-#define HISTORY_DEPTH 10
+#include "shell.h"
 
 char history[HISTORY_DEPTH][COMMAND_LENGTH];
 int command_counter = 0;
@@ -71,8 +69,7 @@ int tokenize_command(char *buff, char *tokens[])
  * in_background: pointer to a boolean variable. Set to true if user entered
  *       an & as their last token; otherwise set to false.
  */
-void read_command(char *buff, char *tokens[], _Bool *in_background)
-{
+void read_command(char *buff, char *tokens[], _Bool *in_background) {
 	*in_background = false;
 
 	// Read input
@@ -102,10 +99,35 @@ void read_command(char *buff, char *tokens[], _Bool *in_background)
 	}
 }
 
-/*
-write(STDOUT_FILENO, "x123", strlen("x123"));
-write(STDOUT_FILENO, "\n", strlen("\n"));
-*/
+void read_command_modified(char *buff, char *tokens[], _Bool *in_background) {
+	*in_background = false;
+
+	// Read input
+	int length = strnlen(buff, COMMAND_LENGTH);
+
+	if (length < 0) {
+		perror("Unable to read command from keyboard. Terminating.\n");
+		exit(-1);
+	}
+
+	// Null terminate and strip \n.
+	buff[length] = '\0';
+	if (buff[strlen(buff) - 1] == '\n') {
+		buff[strlen(buff) - 1] = '\0';
+	}
+
+	// Tokenize (saving original command string)
+	int token_count = tokenize_command(buff, tokens);
+	if (token_count == 0) {
+		return;
+	}
+
+	// Extract if running in background:
+	if (token_count > 0 && strcmp(tokens[token_count - 1], "&") == 0) {
+		*in_background = true;
+		tokens[token_count - 1] = 0;
+	}
+}
 
 // Add command to history array
 void add_to_history(const char *command) {
@@ -130,6 +152,39 @@ void display_history() {
     }
 }
 
+// find the command by the command number
+void read_command_history_exec(int command_number, _Bool in_background) {
+    int start = command_counter > HISTORY_DEPTH ? command_counter - HISTORY_DEPTH : 0;
+
+    // Check if the command number is within the valid range
+    if (!(start <= command_number) || !(command_number <= command_counter)) {
+        write(STDERR_FILENO, "Error: command could not be found in history range.", strlen("Error: command could not be found in history range."));
+		write(STDOUT_FILENO, "\n", strlen("\n"));
+    } 
+	// Find the command in the history
+	else {
+		int index = 0;
+		// if cammand_number is inputted, must decrement as it is 1 step ahead from add_to_history()
+		if (command_number == command_counter) {
+			index = (command_number-1) % HISTORY_DEPTH;
+		}
+		else {
+			index = command_number % HISTORY_DEPTH;
+		}
+		// if found, copy the string.
+        if (history[index]) {
+			char *tokens[NUM_TOKENS];
+			char input_buffer[COMMAND_LENGTH];
+            strcpy(input_buffer, history[index]);
+			write(STDOUT_FILENO, input_buffer, strlen(input_buffer));
+			write(STDOUT_FILENO, "\n", strlen("\n"));
+			// essentially call main, without the loop
+			read_command_modified(input_buffer, tokens, &in_background);
+			shell_manager(tokens, in_background);
+		}   
+    }
+}
+
 // clear history helper
 void clear_history() {
 	// zero out history array with memset()
@@ -139,7 +194,6 @@ void clear_history() {
 }
 
 void shell_manager(char* tokens[], _Bool in_background) {
-
 	// Concatenate tokens into a single command string
     char command[COMMAND_LENGTH] = "";
     for (int i = 0; tokens[i] != NULL; i++) {
@@ -163,7 +217,7 @@ void shell_manager(char* tokens[], _Bool in_background) {
 		clear_history();
 		return;
 	}
-	/*
+	
 	if (strcmp(tokens[0], "!!") == 0) {
 		// if history is empty
 		if (command_counter == 0) {
@@ -171,11 +225,12 @@ void shell_manager(char* tokens[], _Bool in_background) {
 			write(STDOUT_FILENO, "\n", strlen("\n"));
 		}
 		else {
-
+			//read_command_history(command_counter);
+			read_command_history_exec(0, in_background);
 		}
 		return;
 	}
-	*/
+	
 
 	// exit the shell program
 	if (strcmp(tokens[0], "exit") == 0) {
