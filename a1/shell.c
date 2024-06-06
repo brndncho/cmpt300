@@ -14,6 +14,8 @@
 #include <errno.h>
 
 char history[HISTORY_DEPTH][COMMAND_LENGTH];
+char prev_dir[COMMAND_LENGTH];
+char curr_dir[COMMAND_LENGTH];
 int command_counter = 0;
 
 
@@ -101,13 +103,14 @@ void read_command(char *buff, char *tokens[], _Bool *in_background) {
 	}
 }
 
+// read command modifed to executing history commands
 void read_command_modified(char *buff, char *tokens[], _Bool *in_background) {
 	*in_background = false;
 
 	// Read input
 	int length = strnlen(buff, COMMAND_LENGTH);
 
-	if (length < 0) {
+	if (length < 0 && (errno != EINTR)) {
 		perror("Unable to read command from keyboard. Terminating.\n");
 		exit(-1);
 	}
@@ -206,6 +209,10 @@ void display_help() {
 	write(STDOUT_FILENO, "\n", strlen("\n"));
 	write(STDOUT_FILENO, "help x: Display information about shell command x", strlen("help x: Display information about shell command x"));
 	write(STDOUT_FILENO, "\n", strlen("\n"));
+	write(STDOUT_FILENO, "history: Display the 10 previously used commands", strlen("history: Display the 10 previously used commands"));
+	write(STDOUT_FILENO, "\n", strlen("\n"));
+	write(STDOUT_FILENO, "! commands: !n runs command n from history, !! runs previous command, !- clears the history", strlen("! commands: !n runs command n from history, !! runs previous command, !- clears the history"));
+	write(STDOUT_FILENO, "\n", strlen("\n"));
 }
 
 void shell_manager(char* tokens[], _Bool in_background) {
@@ -213,6 +220,12 @@ void shell_manager(char* tokens[], _Bool in_background) {
 	// if signal occured, skip these tokens and set error back to 0
 	if (errno == EINTR) {
 		errno = 0;
+		return;
+	}
+
+	// if nothing is entered
+	if (tokens[0] == NULL) {
+		perror("No command detected.\n");
 		return;
 	}
 
@@ -233,6 +246,7 @@ void shell_manager(char* tokens[], _Bool in_background) {
 		// Add command to history
     	add_to_history(command);
 	}
+	// ! commands
 	else {
 		if (tokens[1] != NULL) {
 			write(STDERR_FILENO, "! Error: too many arguments", strlen("! Error: too many arguments"));
@@ -243,7 +257,7 @@ void shell_manager(char* tokens[], _Bool in_background) {
 			clear_history();
 			return;
 		}
-		// enter previous command
+		// exec previous command
 		else if (strcmp(tokens[0], "!!") == 0) {
 			// if history is empty
 			if (command_counter == 0) {
@@ -251,17 +265,18 @@ void shell_manager(char* tokens[], _Bool in_background) {
 				write(STDOUT_FILENO, "\n", strlen("\n"));
 			}
 			else {
-				//read_command_history(command_counter);
-				read_command_history_exec(0, in_background);
+				read_command_history_exec(command_counter, in_background);
 			}
 			return;
 		}
+		// exec !n command
 		else {
 			// copy token[0] 
 			char input_buffer[COMMAND_LENGTH];
 			strcpy(input_buffer, tokens[0]);
 			// get rid of !
 			memmove(input_buffer, input_buffer+1, strlen(input_buffer));\
+			// check if !.... is a digit
 			// Idea from: https://stackoverflow.com/questions/16644906/how-to-check-if-a-string-is-a-number
 			int i = 0;
 			while (i < strlen(input_buffer)) {
@@ -272,9 +287,9 @@ void shell_manager(char* tokens[], _Bool in_background) {
 				}
 				i++;
 			}
+			// convert string to int
 			int command_num = atoi(input_buffer);
-			//write(STDOUT_FILENO, command_num, strlen(command_num));
-			//write(STDOUT_FILENO, "\n", strlen("\n"));
+			// exec command
 			read_command_history_exec(command_num, in_background);
 			return;
 		}
@@ -304,9 +319,12 @@ void shell_manager(char* tokens[], _Bool in_background) {
 	// change the current working directory
 	if (strcmp(tokens[0], "cd") == 0) {
 			// if no directory is inputted
-		if (tokens[1] == NULL) {
-			write(STDERR_FILENO, "cd Failed: expected an argument", strlen("cd Failed: expected an argument"));
-			write(STDOUT_FILENO, "\n", strlen("\n"));
+		if (tokens[1] == NULL || strcmp(tokens[1], "~") == 0) {
+			// return to home 
+			if (chdir(getenv("HOME")) != 0) {
+				perror("Unable to cd to home: ");
+				exit(-1);
+			}
 			return;
 		}
 		// if too many arguments
@@ -315,6 +333,38 @@ void shell_manager(char* tokens[], _Bool in_background) {
 			write(STDOUT_FILENO, "\n", strlen("\n"));
 			return;
 		}
+
+		if (getcwd(curr_dir, sizeof(curr_dir)) != NULL) {
+			}
+			else {
+			perror("getcwd() Error");
+			exit(-1);
+			}	
+
+		if (strcmp(tokens[1], "-") != 0) {
+			if (getcwd(prev_dir, sizeof(prev_dir)) != NULL) {
+			}
+			else {
+			perror("getcwd() Error");
+			exit(-1);
+			}	
+		}
+
+		if (strcmp(tokens[1], "-") == 0) {
+			if (strlen(prev_dir) == 0) {
+				write(STDERR_FILENO, "cd - Failed: previous directory not set", strlen("cd - Failed: previous directory not set"));
+				write(STDOUT_FILENO, "\n", strlen("\n"));
+			}
+			if (chdir(prev_dir) != 0) {
+				write(STDERR_FILENO, "cd Failed: invalid directory", strlen("cd Failed: invalid directory"));
+				write(STDOUT_FILENO, "\n", strlen("\n"));
+				return;
+			}
+			strncpy(prev_dir, curr_dir, sizeof(prev_dir));
+			//memset(prev_dir, 0, strlen(prev_dir));
+			return;
+		}
+
 		// if directory could not be found
 		if (chdir(tokens[1]) != 0) {
 			write(STDERR_FILENO, "cd Failed: invalid directory", strlen("cd Failed: invalid directory"));
@@ -349,6 +399,22 @@ void shell_manager(char* tokens[], _Bool in_background) {
 				write(STDOUT_FILENO, "'cwd' is a builtin command for displaying the current working directory", strlen("'cwd' is a builtin command for displaying the current working directory"));
 				write(STDOUT_FILENO, "\n", strlen("\n"));
 			}
+			else if (strcmp(tokens[1], "history") == 0) {
+				write(STDOUT_FILENO, "'history' is a builtin command for displaying the 10 previously used commands", strlen("'history' is a builtin command for displaying the 10 previously used commands"));
+				write(STDOUT_FILENO, "\n", strlen("\n"));
+			}
+			else if (strcmp(tokens[1], "!") == 0) {
+				write(STDOUT_FILENO, "'!' is a builtin command for running command n from the history list.", strlen("'!' is a builtin command for running command n from the history list."));
+				write(STDOUT_FILENO, "\n", strlen("\n"));
+			}
+			else if (strcmp(tokens[1], "!!") == 0) {
+				write(STDOUT_FILENO, "'!!' is a builtin command for running the previously used command.", strlen("'!!' is a builtin command for running the previously used command."));
+				write(STDOUT_FILENO, "\n", strlen("\n"));
+			}
+			else if (strcmp(tokens[1], "!-") == 0) {
+				write(STDOUT_FILENO, "'!-' is a builtin command for clearing the command history.", strlen("'!-' is a builtin command for clearing the command history."));
+				write(STDOUT_FILENO, "\n", strlen("\n"));
+			}
 			// external commands
 			else {
 				write(STDOUT_FILENO, "'", strlen("'"));
@@ -368,25 +434,30 @@ void shell_manager(char* tokens[], _Bool in_background) {
 
 	// create child process
 	pid_t var_pid;
-	int status;
 	var_pid = fork();
 
 	if (var_pid < 0) {
 		perror("fork Failed");
 		exit(-1);
 	}
+	/* exec outside functions (execvp)
+	   note: will have to press enter twice to see prompt agian after child process has finished
+	*/
 	else if (var_pid == 0) {
 		int execvp_code = execvp(tokens[0], tokens);
-		
 		// in case of error
 		if (execvp_code == -1) {
 			perror("execvp Failed");
 			exit(-1);
 		}
+		exit(0);
 	}
-	// wait for child to complete
-	else if (!in_background) {
-		while (waitpid(-1, &status, WNOHANG) > 0);
+	// wait for child to complete if parent
+	else {
+		if (!in_background) {
+			// Source: https://support.sas.com/documentation/onlinedoc/sasc/doc/lr2/waitpid.htm
+			while (waitpid(-1, NULL, WNOHANG) > 0);
+		}
 	}
 	// Cleanup any previously exited background child processes
 	// (The Zombies)
@@ -394,6 +465,7 @@ void shell_manager(char* tokens[], _Bool in_background) {
 	
 }
 
+// signal handler
 void handle_SIGINT() {
 	write(STDOUT_FILENO, "\n", strlen("\n"));
 	display_help(); // print out help
@@ -422,6 +494,15 @@ int main(int argc, char* argv[])
 
 	while (true) {
 
+		/**
+		 * Steps For Basic Shell:
+		 * 1. Fork a child process
+		 * 2. Child process invokes execvp() using results in token array.
+		 * 3. If in_background is false, parent waits for
+		 *    child to finish. Otherwise, parent loops back to
+		 *    read_command() again immediately.
+		 */
+
 		// Get command
 		// Use write because we need to use read() to work with
 		// signals, and read() is incompatible with printf().
@@ -442,28 +523,7 @@ int main(int argc, char* argv[])
 		read_command(input_buffer, tokens, &in_background);
 
 		shell_manager(tokens, in_background);
-		
-		/* 
-		// DEBUG: Dump out arguments:
-		for (int i = 0; tokens[i] != NULL; i++) {
-			write(STDOUT_FILENO, "   Token: ", strlen("   Token: "));
-			write(STDOUT_FILENO, tokens[i], strlen(tokens[i]));
-			write(STDOUT_FILENO, "\n", strlen("\n"));
-		}
-		if (in_background) {
-			write(STDOUT_FILENO, "Run in background.", strlen("Run in background."));
-		}
-		*/
-
-		/**
-		 * Steps For Basic Shell:
-		 * 1. Fork a child process
-		 * 2. Child process invokes execvp() using results in token array.
-		 * 3. If in_background is false, parent waits for
-		 *    child to finish. Otherwise, parent loops back to
-		 *    read_command() again immediately.
-		 */
-
 	}
+
 	return 0;
 }
