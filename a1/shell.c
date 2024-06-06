@@ -1,5 +1,6 @@
 // Shell starter file
 // You may make any changes to any part of this file.
+#include "shell.h"
 
 #include <stdio.h>
 #include <stdbool.h>
@@ -9,8 +10,8 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <ctype.h>
-
-#include "shell.h"
+#include <signal.h>
+#include <errno.h>
 
 char history[HISTORY_DEPTH][COMMAND_LENGTH];
 int command_counter = 0;
@@ -76,7 +77,7 @@ void read_command(char *buff, char *tokens[], _Bool *in_background) {
 	// Read input
 	int length = read(STDIN_FILENO, buff, COMMAND_LENGTH-1);
 
-	if (length < 0) {
+	if (length < 0 && (errno != EINTR)) {
 		perror("Unable to read command from keyboard. Terminating.\n");
 		exit(-1);
 	}
@@ -194,7 +195,27 @@ void clear_history() {
 	command_counter = 0;
 }
 
+void display_help() {
+	write(STDOUT_FILENO, "Supported internal commands:", strlen("Supported internal commands:"));
+	write(STDOUT_FILENO, "\n", strlen("\n"));
+	write(STDOUT_FILENO, "exit: Exit the shell", strlen("exit: Exit the shell"));
+	write(STDOUT_FILENO, "\n", strlen("\n"));
+	write(STDOUT_FILENO, "cwd: Display the current working directory", strlen("cwd: Display the current working directory"));
+	write(STDOUT_FILENO, "\n", strlen("\n"));
+	write(STDOUT_FILENO, "cd: Change the current working directory", strlen("cd: Change the current working directory"));
+	write(STDOUT_FILENO, "\n", strlen("\n"));
+	write(STDOUT_FILENO, "help x: Display information about shell command x", strlen("help x: Display information about shell command x"));
+	write(STDOUT_FILENO, "\n", strlen("\n"));
+}
+
 void shell_manager(char* tokens[], _Bool in_background) {
+
+	// if signal occured, skip these tokens and set error back to 0
+	if (errno == EINTR) {
+		errno = 0;
+		return;
+	}
+
 	// Concatenate tokens into a single command string
     char command[COMMAND_LENGTH] = "";
     for (int i = 0; tokens[i] != NULL; i++) {
@@ -222,6 +243,7 @@ void shell_manager(char* tokens[], _Bool in_background) {
 			clear_history();
 			return;
 		}
+		// enter previous command
 		else if (strcmp(tokens[0], "!!") == 0) {
 			// if history is empty
 			if (command_counter == 0) {
@@ -240,7 +262,6 @@ void shell_manager(char* tokens[], _Bool in_background) {
 			strcpy(input_buffer, tokens[0]);
 			// get rid of !
 			memmove(input_buffer, input_buffer+1, strlen(input_buffer));\
-
 			// Idea from: https://stackoverflow.com/questions/16644906/how-to-check-if-a-string-is-a-number
 			int i = 0;
 			while (i < strlen(input_buffer)) {
@@ -307,16 +328,7 @@ void shell_manager(char* tokens[], _Bool in_background) {
 	if (strcmp(tokens[0], "help") == 0) {
 		// list all internal commands
 		if (tokens[1] == NULL) {
-			write(STDOUT_FILENO, "Supported internal commands:", strlen("Supported internal commands:"));
-			write(STDOUT_FILENO, "\n", strlen("\n"));
-			write(STDOUT_FILENO, "exit: Exit the shell", strlen("exit: Exit the shell"));
-			write(STDOUT_FILENO, "\n", strlen("\n"));
-			write(STDOUT_FILENO, "cwd: Display the current working directory", strlen("cwd: Display the current working directory"));
-			write(STDOUT_FILENO, "\n", strlen("\n"));
-			write(STDOUT_FILENO, "cd: Change the current working directory", strlen("cd: Change the current working directory"));
-			write(STDOUT_FILENO, "\n", strlen("\n"));
-			write(STDOUT_FILENO, "help x: Display information about shell command x", strlen("help x: Display information about shell command x"));
-			write(STDOUT_FILENO, "\n", strlen("\n"));
+			display_help();
 		}
 		// if more than one argument
 		else if (tokens[2] != NULL) {
@@ -382,13 +394,23 @@ void shell_manager(char* tokens[], _Bool in_background) {
 	
 }
 
-
+void handle_SIGINT() {
+	write(STDOUT_FILENO, "\n", strlen("\n"));
+	display_help(); // print out help
+}
 
 /**
  * Main and Execute Commands
  */
 int main(int argc, char* argv[])
 {
+	// set up the signal handler
+	struct sigaction handler;
+	handler.sa_handler = handle_SIGINT;
+	handler.sa_flags = 0;
+	sigemptyset(&handler.sa_mask);
+	sigaction(SIGINT, &handler, NULL);
+	
 	char input_buffer[COMMAND_LENGTH];
 	char *tokens[NUM_TOKENS];
 
@@ -420,9 +442,7 @@ int main(int argc, char* argv[])
 		read_command(input_buffer, tokens, &in_background);
 
 		shell_manager(tokens, in_background);
-
-
-
+		
 		/* 
 		// DEBUG: Dump out arguments:
 		for (int i = 0; tokens[i] != NULL; i++) {
