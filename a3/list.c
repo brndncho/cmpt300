@@ -55,13 +55,13 @@ int List_countNodes (struct nodeStruct *head) {
     return count;
 }
 
-/*
+
 // return first node holding the item, return null if none found
-struct nodeStruct* List_findNode(struct nodeStruct *head, const char *item) {
+struct nodeStruct* List_findNode(struct nodeStruct *head, void* block) {
     if (head != NULL) {
         struct nodeStruct* cur = head;
         while (cur != NULL) {
-            if (strcmp(cur->item, item) == 0) {
+            if (cur-> block == block) {
                 return cur;
             }
             cur = cur->next;
@@ -69,7 +69,6 @@ struct nodeStruct* List_findNode(struct nodeStruct *head, const char *item) {
     }
     return NULL;
 }
-*/
 
 // delete node from list and free memory.
 void List_deleteNode (struct nodeStruct **headRef, struct nodeStruct *node) {
