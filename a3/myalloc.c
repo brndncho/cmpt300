@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "myalloc.h"
+#include "list.h"
 
 #define ALIGN 64
 #define HEADER 8

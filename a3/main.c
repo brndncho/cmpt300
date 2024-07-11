@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "myalloc.h"
+#include "list.h"
 
 int main(int argc, char* argv[]) {
     initialize_allocator(100, FIRST_FIT);
