@@ -3,6 +3,9 @@
 #include <stdlib.h>
 #include "myalloc.h"
 
+#define ALIGN 64
+#define HEADER 8
+
 struct Myalloc {
     enum allocation_algorithm aalgorithm;
     int size;
@@ -13,13 +16,20 @@ struct Myalloc {
 
 struct Myalloc myalloc;
 
+// function for rounding up size
+// source : https://stackoverflow.com/questions/3407012/rounding-up-to-the-nearest-multiple-of-a-number?page=1&tab=scoredesc#tab-top (Author:xlq)
+int align_size(int _size) {
+    return _size + ALIGN - 1 - (_size + ALIGN - 1) % ALIGN;
+}
+
 void initialize_allocator(int _size, enum allocation_algorithm _aalgorithm) {
     assert(_size > 0);
     myalloc.aalgorithm = _aalgorithm;
-    myalloc.size = _size;
+    myalloc.size = align_size(_size);
     myalloc.memory = malloc((size_t)myalloc.size);
 
     // Add some other initialization 
+
 }
 
 void destroy_allocator() {
