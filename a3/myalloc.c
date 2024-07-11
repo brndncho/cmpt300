@@ -13,6 +13,8 @@ struct Myalloc {
     void* memory;
     // Some other data members you want, 
     // such as lists to record allocated/free memory
+    struct nodeStruct* allocated_list;
+    struct nodeStruct* free_list;
 };
 
 struct Myalloc myalloc;
@@ -30,7 +32,8 @@ void initialize_allocator(int _size, enum allocation_algorithm _aalgorithm) {
     myalloc.memory = malloc((size_t)myalloc.size);
 
     // Add some other initialization 
-
+    myalloc.allocated_list = NULL;
+    myalloc.free_list = NULL;
 }
 
 void destroy_allocator() {
